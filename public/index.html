@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Welcome to Firebase Hosting</title>
+  </head>
+  <body>
+    <h1>Selamat Datang Di Firebase</h1>
+    <button id="keluar">keluar</button>
+
+    <form>
+      <input type="text" id="nomor_id" readonly hidden>
+      <label>Judul</label><br>
+      <input type="text" id="judul"><br>
+      <label>Text</label><br>
+      <textarea id="konten"></textarea><br><br>
+      <input type="file" id="uploadFile"><br>
+      <progress value="0" max="100" id="uploadProgress"></progress><br>
+      <button id="tambahData">Tambah Data</button>
+      <button id="editData">Edit Data</button>
+    </form>
+
+    <table border="1">
+      <thead>
+        <tr>
+          <td>No</td>
+          <td>Judul</td>
+          <td>Konten</td>
+          <td colspan="2">aksi</td>
+        </tr>
+      </thead>
+      <tbody id="list_konten">
+
+      </tbody>
+    </table>
+    
+<script src="https://www.gstatic.com/firebasejs/4.12.1/firebase.js"></script>
+<script>
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyA8Fd8e-fkIou3RFHtXKrkEdBshGqL6ns0",
+    authDomain: "latihan-firebase-b702d.firebaseapp.com",
+    databaseURL: "https://latihan-firebase-b702d.firebaseio.com",
+    projectId: "latihan-firebase-b702d",
+    storageBucket: "latihan-firebase-b702d.appspot.com",
+    messagingSenderId: "674027141410"
+  };
+  firebase.initializeApp(config);
+
+
+    /*================FIREBASE OTENTIKASI=====================*/ 
+    var otentikasi = firebase.auth();
+
+    otentikasi.onAuthStateChanged(function(user) {
+      if (!user) {
+        alert('silahkan login');
+        location.href = 'login.html';
+      }
+    });
+
+    document.getElementById('keluar').addEventListener('click' , keluarUser);
+
+    function keluarUser() {
+      var cek = confirm('yakin anda ingin keluar ?');
+      if (cek) {   
+        otentikasi.signOut().then(function() {
+          alert('anda telah logout');
+        }, function(err) {
+          alert(err.message);
+        }); 
+      }
+    }
+
+    /*=========DEKLARASI VARIABEL DAN REFERENSI DATABASE==========*/
+
+    var db , ArtikelRef;
+
+    db = firebase.database();
+    ArtikelRef = db.ref('Artikel');
+
+
+    /*=============BAGIAN KONFIGURASI TAMBAH GAMBAR==============*/
+    var storage = firebase.storage();
+    var file_btn = document.getElementById('uploadFile');
+    var file;
+
+    file_btn.addEventListener('change' , function(e) {
+      file = e.target.files[0];
+    });
+
+
+    /*================MENAMPILKAN DATA=================*/
+
+    ArtikelRef.on('value' , dataBerhasil , dataGagal);
+    var isi_tabel = document.getElementById('list_konten');
+
+    function dataBerhasil(data) {
+
+    var tampilan_tabel = '';
+    var nomor = 1;
+      data.forEach(function(konten) {
+        tampilan_tabel += '<tr>'+
+                              '<td>'+nomor+'</td>'+
+                              '<td>'+konten.val().judul+'</td>'+
+                              '<td>'+konten.val().konten+'</td>'+
+                              '<td><button onclick="edit(\''+konten.key+'\')">Edit</button></td>'+
+                              '<td><button onclick="hps(\''+konten.key+'\')">Hapus</button></td>'+
+                          '</tr>';
+        nomor++;
+      });
+      isi_tabel.innerHTML = tampilan_tabel;
+    }
+    function dataGagal(err) {
+      console.log(err);
+    }
+
+
+    /*================MENAMBAH DATA=================*/
+
+    var tambahData  = document.getElementById('tambahData');
+    var judulData   = document.getElementById('judul');
+    var kontenData  = document.getElementById('konten');
+
+    tambahData.addEventListener('click' , function(e) {
+      e.preventDefault();
+
+      ArtikelRef.push({
+        judul : judulData.value,
+        konten: kontenData.value
+      });
+      /*BAGIAN UPLOAD GAMBARNYA*/ 
+      var storageRef = storage.ref('foto/'+file.name);
+      var uploadTask = storageRef.put(file);
+
+      uploadTask.on('state_changed' , prosesLoad , prosesErr , prosesSuccess);
+      function prosesLoad(data) {
+        var persen = (data.bytesTransferred/data.totalBytes) * 100;
+        document.getElementById('uploadProgress').value = persen;
+      }
+      function prosesErr(err) {
+        alert(err.message);
+      }
+      function prosesSuccess(berhasil) {
+        console.log(berhasil);
+      }
+
+    })
+    // selain push , bisa juga set . tapi hanya untuk
+    ArtikelRef.on('child_changed' , dataBerubah , dataGagal);
+
+    function dataBerubah() {
+      alert('data berhasil diperbaharui !');  
+    }
+
+    /*================MENGHAPUS DATA=================*/
+
+    var id_data;
+    function hps(id_data) {
+      var cek_hapus = confirm('apakah anda yakin ingin menghapus data ?');
+      if (cek_hapus) {
+        ArtikelRef.child(id_data).remove();
+      }
+    }
+    // menampilkan data ke halaman browser
+    ArtikelRef.on('child_removed' , dataDihapus , dataGagal);
+    function dataDihapus() {
+      alert('data berhasil dihapus !');  
+    }
+
+    /*================MENGEDIT DATA=================*/
+    function edit(id_data) {
+      var cek_data = confirm('apakah anda yakin ingin mengedit data ?');
+      if (cek_data) {
+        var query = db.ref('Artikel/'+id_data);
+
+        // suatu perintah untuk mengambil data spesifik dari database
+        query.once('value').then(isiDataEdit);
+
+        function isiDataEdit(dataEdit) {
+          var data = dataEdit.val();
+
+          document.getElementById('nomor_id').value = dataEdit.key;
+          document.getElementById('judul').value    = data.judul;
+          document.getElementById('konten').value   = data.konten;
+        }
+      }
+    }
+
+    document.getElementById('editData').addEventListener('click' , function(e) {
+      e.preventDefault();
+      var id_edit = document.getElementById('nomor_id').value;
+
+      db.ref('Artikel/'+id_edit).set({
+        judul   : document.getElementById('judul').value,
+        konten  : document.getElementById('konten').value
+      });
+    });
+
+
+</script>
+  
+  </body>
+</html>

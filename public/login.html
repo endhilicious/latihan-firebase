@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Halaman Login</title>
+	<style type="text/css">
+		body{
+			width: 80%;
+			margin: auto;
+		}
+	</style>
+</head>
+<body>
+	<h1>Login User</h1>
+	<form>
+		<label>Email</label><br>
+		<input type="email" id="email"><br>
+		<label>Password</label><br>
+		<input type="password" id="password"><br>
+		<button id="login">Log In</button>
+		<button id="signin">Sign In</button>
+	</form>
+
+<script src="https://www.gstatic.com/firebasejs/4.12.1/firebase.js"></script>
+<script>
+  // Initialize Firebase
+  var config = {
+    apiKey: "AIzaSyA8Fd8e-fkIou3RFHtXKrkEdBshGqL6ns0",
+    authDomain: "latihan-firebase-b702d.firebaseapp.com",
+    databaseURL: "https://latihan-firebase-b702d.firebaseio.com",
+    projectId: "latihan-firebase-b702d",
+    storageBucket: "latihan-firebase-b702d.appspot.com",
+    messagingSenderId: "674027141410"
+  };
+  firebase.initializeApp(config);
+
+
+    /*=========DEKLARASI VARIABEL DAN REFERENSI DATABASE==========*/
+	var db , ArtikelRef;
+
+	db = firebase.database();
+	UserRef = db.ref('users');
+
+
+  /*================FIREBASE OTENTIKASI=====================*/ 
+  var otentikasi = firebase.auth();
+
+  var email 	= document.getElementById('email');
+  var password 	= document.getElementById('password');
+  var masuk 	= document.getElementById('login');
+  var daftar 	= document.getElementById('signin');
+
+  masuk.addEventListener('click' , prosesMasuk);
+  daftar.addEventListener('click' , prosesDaftar);
+
+  function prosesDaftar(e) {
+  	e.preventDefault();
+  	otentikasi.createUserWithEmailAndPassword(email.value , password.value)
+  		.then(function(data) {
+  			otentikasi.currentUser.sendEmailVerification().then(function() {
+  				alert('terdaftar');
+				UserRef.child(data.uid).set({
+					email : email.value
+				});
+  			}).catch(function(err) {
+  				alert(err.message);
+  				password.value = '';
+  			})
+  		}).catch(function(err) {
+			alert(err.message);
+  			password.value = '';
+  		})
+  }
+  function prosesMasuk(e) {
+  	e.preventDefault();
+  	otentikasi.signInWithEmailAndPassword(email.value , password.value)
+  		.then(function(data) {
+  			alert('berhasil masuk');
+  			location.href = 'index.html';
+  		})
+  		.catch(function(err) {
+  			alert(err.message);
+  			email.value = '';
+  			password.value = '';
+  		})
+  }
+
+</script>
+</body>
+</html>
